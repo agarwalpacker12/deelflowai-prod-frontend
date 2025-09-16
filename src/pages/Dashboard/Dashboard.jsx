@@ -105,6 +105,7 @@ const Dashboard = () => {
         const [
           totalRevenueRes,
           activeUsersRes,
+          propertiesListedRes,
           aiConversationsRes,
           totalDealsRes,
           monthlyProfitRes,
@@ -131,6 +132,7 @@ const Dashboard = () => {
         ] = await Promise.allSettled([
           DashboardAPI.getTotalRevenue(),
           DashboardAPI.getActiveUsers(),
+          DashboardAPI.getPropertiesListed(),
           DashboardAPI.getAiConversations(),
           DashboardAPI.getTotalDeals(),
           DashboardAPI.getMonthlyProfit(),
@@ -177,10 +179,22 @@ const Dashboard = () => {
           };
         }
 
+        // Process the response
+        if (propertiesListedRes.status === "fulfilled") {
+          newDashboardData.propertiesListed = {
+            value: formatNumber(
+              propertiesListedRes.value.data.properties_listed || 0
+            ),
+            percentage: `${
+              propertiesListedRes.value.data.change_percentage || 0
+            }%`,
+          };
+        }
+
         if (aiConversationsRes.status === "fulfilled") {
           newDashboardData.aiConversations = {
             value: formatNumber(
-              aiConversationsRes.value.data.total_conversations || 0
+              aiConversationsRes.value.data.ai_conversations || 0
             ),
             percentage: `${
               aiConversationsRes.value.data.change_percentage || 0
@@ -220,10 +234,10 @@ const Dashboard = () => {
 
         if (complianceStatusRes.status === "fulfilled") {
           newDashboardData.complianceStatus = {
-            percentage:
-              complianceStatusRes.value.data.compliance_percentage || 0,
+            percentage: complianceStatusRes.value.data.compliance_percent || 0,
             status:
-              complianceStatusRes.value.data.status || "All audits compliant",
+              complianceStatusRes.value.data.system_health ||
+              "All audits compliant",
           };
         }
         // Process AI accuracy response
@@ -259,15 +273,15 @@ const Dashboard = () => {
         if (nlpProcessingRes.status === "fulfilled") {
           const data = nlpProcessingRes.value.data;
           newAiMetrics.nlpProcessing = {
-            value: formatNumber(data.total_processed || 0),
-            percentage: `${data.processing_success_rate || 0}%`,
+            value: formatNumber(data.accuracy_rate || 0),
+            percentage: `${data.total_processed || 0}%`,
           };
         }
 
         if (blockchainRes.status === "fulfilled") {
           const data = blockchainRes.value.data;
           newAiMetrics.blockchain = {
-            value: formatNumber(data.total_transactions || 0),
+            value: formatNumber(data.total_txns || 0),
             percentage: `${data.success_rate || 0}%`,
           };
         }
