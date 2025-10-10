@@ -166,16 +166,18 @@ const Dashboard = () => {
         if (totalRevenueRes.status === "fulfilled") {
           newDashboardData.totalRevenue = {
             value: formatCurrency(
-              totalRevenueRes.value.data.total_revenue || 0
+              totalRevenueRes.value.data.data.totalRevenue || 0
             ),
-            percentage: `${totalRevenueRes.value.data.change_percentage || 0}%`,
+            percentage: `${totalRevenueRes.value.data.data.growthRate || 0}%`,
           };
         }
 
         if (activeUsersRes.status === "fulfilled") {
           newDashboardData.activeUsers = {
-            value: formatNumber(activeUsersRes.value.data.active_users || 0),
-            percentage: `${activeUsersRes.value.data.change_percentage || 0}%`,
+            value: formatNumber(
+              activeUsersRes.value.data.data.activeUsers || 0
+            ),
+            percentage: `${activeUsersRes.value.data.data.userGrowth || 0}%`,
           };
         }
 
@@ -194,10 +196,10 @@ const Dashboard = () => {
         if (aiConversationsRes.status === "fulfilled") {
           newDashboardData.aiConversations = {
             value: formatNumber(
-              aiConversationsRes.value.data.ai_conversations || 0
+              aiConversationsRes.value.data.data.ai_conversations || 0
             ),
             percentage: `${
-              aiConversationsRes.value.data.change_percentage || 0
+              aiConversationsRes.value.data.data.change_percentage || 0
             }%`,
           };
         }
@@ -214,10 +216,10 @@ const Dashboard = () => {
         if (monthlyProfitRes.status === "fulfilled") {
           newDashboardData.monthlyProfit = {
             value: formatCurrency(
-              monthlyProfitRes.value.data.monthly_profit || 0
+              monthlyProfitRes.value.data.data.monthlyProfit || 0
             ),
             percentage: `${
-              monthlyProfitRes.value.data.change_percentage || 0
+              monthlyProfitRes.value.data.data.change_percentage || 0
             }% from last month`,
           };
         }
@@ -234,9 +236,10 @@ const Dashboard = () => {
 
         if (complianceStatusRes.status === "fulfilled") {
           newDashboardData.complianceStatus = {
-            percentage: complianceStatusRes.value.data.compliance_percent || 0,
+            percentage:
+              complianceStatusRes.value.data.data.compliance_percent || 0,
             status:
-              complianceStatusRes.value.data.system_health ||
+              complianceStatusRes.value.data.data.system_health ||
               "All audits compliant",
           };
         }
@@ -244,8 +247,8 @@ const Dashboard = () => {
         if (aiAccuracyRes.status === "fulfilled") {
           const data = aiAccuracyRes.value.data;
           newDashboardData.aiAccuracy = {
-            value: `${data.overall_accuracy || 0}%`,
-            percentage: `${data.improvement_percentage || 0}% improvement`,
+            value: `${data.overallAccuracy || 0}%`,
+            percentage: `${data.predictionAccuracy || 0}% improvement`,
           };
         }
 
@@ -265,16 +268,16 @@ const Dashboard = () => {
         if (visionAnalysisRes.status === "fulfilled") {
           const data = visionAnalysisRes.value.data;
           newAiMetrics.visionAnalysis = {
-            value: formatNumber(data.total_analyses || 0),
-            percentage: `${data.accuracy_rate || 0}%`,
+            value: formatNumber(data.imagesProcessed || 0),
+            percentage: `${data.accuracy || 0}%`,
           };
         }
 
         if (nlpProcessingRes.status === "fulfilled") {
           const data = nlpProcessingRes.value.data;
           newAiMetrics.nlpProcessing = {
-            value: formatNumber(data.accuracy_rate || 0),
-            percentage: `${data.total_processed || 0}%`,
+            value: formatNumber(data.sentimentAccuracy || 0),
+            percentage: `${data.documentsProcessed || 0}%`,
           };
         }
 
@@ -292,18 +295,21 @@ const Dashboard = () => {
         const newTenantData = { ...tenantData };
 
         if (tenantStatsRes.status === "fulfilled") {
-          const data = tenantStatsRes.value.data;
+          const data = tenantStatsRes.value.data.data;
+
           newTenantData.stats = {
-            activeTenants: (data.active_tenants || 0).toString(),
-            paymentOverdue: (data.payment_overdue || 0).toString(),
+            activeTenants: (data.activeTenants || 0).toString(),
+            paymentOverdue: (data.paymentOverdue || 0).toString(),
             suspended: (data.suspended || 0).toString(),
-            monthlyRevenue: formatCurrency(data.monthly_revenue || 0),
+            monthlyRevenue: formatCurrency(data.monthlyRevenue || 0),
           };
         }
 
         if (tenantActivityRes.status === "fulfilled") {
-          const data = tenantActivityRes.value.data;
-          newTenantData.recentActivity = data.recent_activities || [];
+          const data = tenantActivityRes.value.data.data;
+          console.log("data", data);
+
+          newTenantData.recentActivity = data.activities || [];
         }
 
         setTenantData(newTenantData);
@@ -821,9 +827,9 @@ const Dashboard = () => {
             />
             <BusinessMetricCard
               title="Voice Calls"
-              value={dashboardData.voiceCalls.value}
-              percentage={dashboardData.voiceCalls.percentage}
-              positive={isPositiveChange(dashboardData.voiceCalls.percentage)}
+              value={dashboardData.voiceCalls.total_calls}
+              percentage={dashboardData.voiceCalls.success_rate}
+              // positive={isPositiveChange(dashboardData.voiceCalls.success_rate)}
               icon={<Phone className="w-5 h-5" />}
               color="orange"
               showTodayBadge={dashboardData.voiceCalls.percentage.includes(

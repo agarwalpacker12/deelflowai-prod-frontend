@@ -74,7 +74,7 @@ api.interceptors.response.use(
 
 // Auth API - Fixed URLs to match your Django urls.py
 export const authAPI = {
-  login: (credentials) => AllPOSTHeader.post("/login/", credentials), // Matches your URL pattern
+  login: (credentials) => AllPOSTHeader.post("/api/auth/login", credentials), // Matches your URL pattern
   register: (userData) => AllPOSTHeader.post("/create-user/", userData), // Matches your URL pattern
   logout: () => api.post("/logout/"),
   getCurrentUser: () => api.get("/user/"),
