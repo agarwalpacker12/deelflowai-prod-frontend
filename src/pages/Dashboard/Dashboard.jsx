@@ -166,18 +166,22 @@ const Dashboard = () => {
         if (totalRevenueRes.status === "fulfilled") {
           newDashboardData.totalRevenue = {
             value: formatCurrency(
-              totalRevenueRes.value.data.data.totalRevenue || 0
+              totalRevenueRes.value.data.data.total_revenue || 0
             ),
-            percentage: `${totalRevenueRes.value.data.data.growthRate || 0}%`,
+            percentage: `${
+              totalRevenueRes.value.data.data.change_percentage || 0
+            }%`,
           };
         }
 
         if (activeUsersRes.status === "fulfilled") {
           newDashboardData.activeUsers = {
             value: formatNumber(
-              activeUsersRes.value.data.data.activeUsers || 0
+              activeUsersRes.value.data.data.active_users || 0
             ),
-            percentage: `${activeUsersRes.value.data.data.userGrowth || 0}%`,
+            percentage: `${
+              activeUsersRes.value.data.data.change_percentage || 0
+            }%`,
           };
         }
 
@@ -185,10 +189,10 @@ const Dashboard = () => {
         if (propertiesListedRes.status === "fulfilled") {
           newDashboardData.propertiesListed = {
             value: formatNumber(
-              propertiesListedRes.value.data.properties_listed || 0
+              propertiesListedRes.value.data.data.properties_listed || 0
             ),
             percentage: `${
-              propertiesListedRes.value.data.change_percentage || 0
+              propertiesListedRes.value.data.data.change_percentage || 0
             }%`,
           };
         }
@@ -206,9 +210,9 @@ const Dashboard = () => {
 
         if (totalDealsRes.status === "fulfilled") {
           newDashboardData.totalDeals = {
-            value: totalDealsRes.value.data.total_deals?.toString() || "0",
+            value: totalDealsRes.value.data.data.total_deals?.toString() || "0",
             percentage: `${
-              totalDealsRes.value.data.change_percentage || 0
+              totalDealsRes.value.data.data.change_percentage || 0
             }% from last month`,
           };
         }
@@ -216,7 +220,7 @@ const Dashboard = () => {
         if (monthlyProfitRes.status === "fulfilled") {
           newDashboardData.monthlyProfit = {
             value: formatCurrency(
-              monthlyProfitRes.value.data.data.monthlyProfit || 0
+              monthlyProfitRes.value.data.data.monthly_profit || 0
             ),
             percentage: `${
               monthlyProfitRes.value.data.data.change_percentage || 0
@@ -226,10 +230,9 @@ const Dashboard = () => {
 
         if (voiceCallsRes.status === "fulfilled") {
           newDashboardData.voiceCalls = {
-            value:
-              voiceCallsRes.value.data.voice_calls_count?.toString() || "0",
+            value: voiceCallsRes.value.data.data.voice_calls?.toString() || "0",
             percentage: `${
-              voiceCallsRes.value.data.change_percentage || 0
+              voiceCallsRes.value.data.data.change_percentage || 0
             }% today`,
           };
         }
@@ -237,21 +240,30 @@ const Dashboard = () => {
         if (complianceStatusRes.status === "fulfilled") {
           newDashboardData.complianceStatus = {
             percentage:
-              complianceStatusRes.value.data.data.compliance_percent || 0,
+              complianceStatusRes.value.data.data.compliance_status || 0,
             status:
-              complianceStatusRes.value.data.data.system_health ||
+              complianceStatusRes.value.data.data.audit_score ||
               "All audits compliant",
           };
         }
         // Process AI accuracy response
+        // if (aiAccuracyRes.status === "fulfilled") {
+        //   const data = aiAccuracyRes.value.data;
+        //   newDashboardData.aiAccuracy = {
+        //     value: `${data.overallAccuracy || 0}%`,
+        //     percentage: `${data.predictionAccuracy || 0}% improvement`,
+        //   };
+        // }
         if (aiAccuracyRes.status === "fulfilled") {
-          const data = aiAccuracyRes.value.data;
-          newDashboardData.aiAccuracy = {
-            value: `${data.overallAccuracy || 0}%`,
-            percentage: `${data.predictionAccuracy || 0}% improvement`,
+          debugger;
+          newDashboardData.aiAccuracyRes = {
+            percentage: aiAccuracyRes.value.data.data.overall_accuracy || 0,
+            status:
+              complianceStatusRes.value.data.data.audit_score ||
+              "All audits compliant",
           };
         }
-
+        // debugger;
         setDashboardData(newDashboardData);
 
         // Process AI metrics responses
@@ -827,8 +839,8 @@ const Dashboard = () => {
             />
             <BusinessMetricCard
               title="Voice Calls"
-              value={dashboardData.voiceCalls.total_calls}
-              percentage={dashboardData.voiceCalls.success_rate}
+              value={dashboardData.voiceCalls.value}
+              percentage={dashboardData.voiceCalls.percentage}
               // positive={isPositiveChange(dashboardData.voiceCalls.success_rate)}
               icon={<Phone className="w-5 h-5" />}
               color="orange"
