@@ -2,6 +2,7 @@ import axios from "axios";
 
 // Base URLs - matching your Django server
 const BASE_URL = "https://api.deelflowai.com";
+// const BASE_URL = "http://dev.deelflowai.com:8140";
 const API_BASE_URL = `${BASE_URL}/api`;
 
 // Create a single API instance for all requests
@@ -126,7 +127,7 @@ export const campaignsAPI = {
   getCampaign: (id) => AllGETHeader.get(`/campaigns/${id}/`),
   createCampaign: (data) => AllPOSTHeader.post("/campaigns/", data),
   updateCampaign: (id, data) => AllPOSTHeader.put(`/campaigns/${id}/`, data),
-  deleteCampaign: (id) => api.delete(`/campaigns/${id}/`),
+  deleteCampaign: (id) => AllPOSTHeader.delete(`/campaigns/${id}/`),
   getRecipients: (id) => api.get(`/campaigns/${id}/recipients/`),
   getActiveCampaigns: () => AllGETHeader.get("/active_campaign_summary/"),
   getCampaignStats: () => AllGETHeader.get("/campaign_property_stats/"),
@@ -160,11 +161,11 @@ export const OrganizationAPI = {
 
 export const RbacAPI = {
   createRole: (data) => AllPOSTHeader.post("/create_role/", data),
-  getRoles: () => AllGETHeader.get("/get_roles/"),
+  getRoles: () => api.get("/roles/"),
   getPermissions: () => AllGETHeader.get("/get_permissions/"),
   UpdatePermission: (id, data) => AllPOSTHeader.put(`/rbac/roles/${id}/`, data),
   UpdateRole: (data) => AllPOSTHeader.put(`/users/${data.id}/roles/`, data),
-  getRoleById: (data) => AllPOSTHeader.post(`/get_role_by_id/`, data),
+  getRoleById: (data) => api.get(`/roles/`, data),
   deleteRole: (roleId) =>
     AllPOSTHeader.post(`/delete_role`, {
       role_id: roleId,
