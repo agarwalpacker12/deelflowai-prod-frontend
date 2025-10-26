@@ -1,8 +1,8 @@
 import axios from "axios";
 
 // Base URLs - matching your Django server
+// const BASE_URL = "http://localhost:8140";
 const BASE_URL = "https://api.deelflowai.com";
-// const BASE_URL = "http://dev.deelflowai.com:8140";
 const API_BASE_URL = `${BASE_URL}/api`;
 
 // Create a single API instance for all requests
@@ -76,7 +76,7 @@ api.interceptors.response.use(
 // Auth API - Fixed URLs to match your Django urls.py
 export const authAPI = {
   login: (credentials) => AllPOSTHeader.post("/api/auth/login", credentials), // Matches your URL pattern
-  register: (userData) => AllPOSTHeader.post("/create-user/", userData), // Matches your URL pattern
+  register: (userData) => AllPOSTHeader.post("/api/auth/register", userData), // Matches your URL pattern
   logout: () => api.post("/logout/"),
   getCurrentUser: () => api.get("/user/"),
   getAllUsers: () => api.get("/users/"),
@@ -160,12 +160,12 @@ export const OrganizationAPI = {
 };
 
 export const RbacAPI = {
-  createRole: (data) => AllPOSTHeader.post("/create_role/", data),
+  createRole: (data) => api.post("/roles/", data),
   getRoles: () => api.get("/roles/"),
-  getPermissions: () => AllGETHeader.get("/get_permissions/"),
+  getPermissions: () => api.get("/permissions/"),
   UpdatePermission: (id, data) => AllPOSTHeader.put(`/rbac/roles/${id}/`, data),
   UpdateRole: (data) => AllPOSTHeader.put(`/users/${data.id}/roles/`, data),
-  getRoleById: (data) => api.get(`/roles/`, data),
+  getRoleById: (id) => api.get(`/roles/${id}`),
   deleteRole: (roleId) =>
     AllPOSTHeader.post(`/delete_role`, {
       role_id: roleId,
