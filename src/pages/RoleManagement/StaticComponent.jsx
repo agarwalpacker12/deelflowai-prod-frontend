@@ -2,11 +2,7 @@ import React, { useEffect, useState } from "react";
 import AddForm from "./add/AddForm";
 import { RbacAPI } from "../../services/api";
 
-<<<<<<< HEAD
 function StaticComponent({ setSelectedPermissions }) {
-=======
-function StaticComponent({ setSelectedPermissions, setSelectedRoleId }) {
->>>>>>> 54018075c9c6560118c47b34b58fc519dae53fcb
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [allRoles, setAllRoles] = useState([]);
 
@@ -30,21 +26,12 @@ function StaticComponent({ setSelectedPermissions, setSelectedRoleId }) {
   const fetchSinglePermissionHandler = async (id) => {
     try {
       const response = await RbacAPI.getRoleById(id);
-<<<<<<< HEAD
       console.log(response.data.data);
 
       // Handle the API response format
       if (response.data.status === "success") {
         console.log(JSON.stringify(response.data.data?.permissions));
         setSelectedPermissions(response?.data?.data?.permissions);
-=======
-
-      // Handle the API response format
-      if (response.data.status === "success") {
-        // console.log(JSON.stringify(response?.data?.data?.permissions));
-        setSelectedPermissions(response?.data?.data?.permissions);
-        setSelectedRoleId(id);
->>>>>>> 54018075c9c6560118c47b34b58fc519dae53fcb
       }
     } catch (err) {
       console.error("Error fetching leads:", err);
