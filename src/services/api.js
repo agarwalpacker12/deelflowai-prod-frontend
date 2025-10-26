@@ -163,7 +163,11 @@ export const RbacAPI = {
   createRole: (data) => api.post("/roles/", data),
   getRoles: () => api.get("/roles/"),
   getPermissions: () => api.get("/permissions/"),
+<<<<<<< HEAD
   UpdatePermission: (id, data) => AllPOSTHeader.put(`/rbac/roles/${id}/`, data),
+=======
+  UpdatePermission: (id, data) => api.put(`/roles/${id}/`, data),
+>>>>>>> 54018075c9c6560118c47b34b58fc519dae53fcb
   UpdateRole: (data) => AllPOSTHeader.put(`/users/${data.id}/roles/`, data),
   getRoleById: (id) => api.get(`/roles/${id}`),
   deleteRole: (roleId) =>
