@@ -1,7 +1,6 @@
 import axios from "axios";
 
 // Base URLs - matching your Django server
-// const BASE_URL = "http://localhost:8140";
 const BASE_URL = "https://api.deelflowai.com";
 const API_BASE_URL = `${BASE_URL}/api`;
 
@@ -89,7 +88,7 @@ export const authAPI = {
 export const leadsAPI = {
   getLeads: (params) => api.get("/leads/", { params }),
   getLead: (id) => api.get(`/leads/${id}/`),
-  createLead: (data) => api.post("/leads/", data),
+  createLead: (data) => AllPOSTHeader.post("/leads/", data),
   updateLead: (id, data) => api.put(`/leads/${id}/`, data),
   deleteLead: (id) => api.delete(`/leads/${id}/`),
   getAIScore: (id) => api.get(`/leads/${id}/ai-score/`),
@@ -163,13 +162,10 @@ export const RbacAPI = {
   createRole: (data) => api.post("/roles/", data),
   getRoles: () => api.get("/roles/"),
   getPermissions: () => api.get("/permissions/"),
-  UpdatePermission: (id, data) => AllPOSTHeader.put(`/rbac/roles/${id}/`, data),
+  UpdatePermission: (id, data) => api.put(`/roles/${id}/`, data),
   UpdateRole: (data) => AllPOSTHeader.put(`/users/${data.id}/roles/`, data),
   getRoleById: (id) => api.get(`/roles/${id}`),
-  deleteRole: (roleId) =>
-    AllPOSTHeader.post(`/delete_role`, {
-      role_id: roleId,
-    }),
+  deleteRole: (roleId) => api.delete(`/roles/${roleId}`),
 };
 
 export const PaymentAPI = {
