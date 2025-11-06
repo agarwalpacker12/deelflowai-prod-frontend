@@ -24,9 +24,18 @@ const PropertiesPage = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [cityFilter, setCityFilter] = useState("");
   const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+  const [zipcode, setZipcode] = useState("");
+  const [state, setState] = useState("");
+  const [propertyType, setPropertyType] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [radius, setRadius] = useState("");
   const [bedrooms, setBedrooms] = useState("");
+  const [bathrooms, setBathrooms] = useState("");
+
   const [transactionType, setTransactionType] = useState("");
-  const [minAiScore, setMinAiScore] = useState("");
+  const [max_sqft, setMax_sqft] = useState("");
   const [error, setError] = useState(null);
   const [savedPropertyIds, setSavedPropertyIds] = useState([]);
 
@@ -56,30 +65,30 @@ const PropertiesPage = () => {
       try {
         const params = {
           page: currentPage,
-          per_page: perPage,
+          limit: perPage,
         };
         if (searchTerm) params.search = searchTerm;
         if (statusFilter) params.status = statusFilter;
         if (cityFilter) params.city = cityFilter;
-        // if (zipFilter) params.zip = zipFilter;
-        if (priceMin) params.price_min = priceMin;
-        // if (priceMax) params.price_max = priceMax;
+        if (zipcode) params.zipcode = zipcode;
+        if (state) params.state = state;
+        if (propertyType) params.property_type = propertyType;
+        if (priceMin) params.min_price = priceMin;
+        if (priceMax) params.max_price = priceMax;
+        if (latitude) params.latitude = latitude;
+        if (longitude) params.longitude = longitude;
+        if (radius) params.radius = radius;
         if (bedrooms) params.bedrooms = bedrooms;
-        // if (bathrooms) params.bathrooms = bathrooms;
+        if (bathrooms) params.bathrooms = bathrooms;
         if (transactionType) params.transaction_type = transactionType;
-        if (minAiScore) params.ai_score_min = minAiScore;
+        if (max_sqft) params.max_sqft = max_sqft;
 
-        const response = await propertiesAPI.getProperties(params);
+        const response = await propertiesAPI.getCombinedProperties(params);
         if (response.data.status === "success") {
-          setProperties(response.data.data);
-          // If meta exists, use it for pagination
-          if (response.data.meta) {
-            setTotal(response.data.meta.total);
-            setTotalPages(response.data.meta.last_page);
-          } else {
-            setTotal(response.data.data.length);
-            setTotalPages(1);
-          }
+          setProperties(response.data.data.properties);
+          // Use pagination data from API response
+          setTotal(response.data.data.total);
+          setTotalPages(Math.ceil(response.data.data.total / perPage));
         } else {
           setError("Failed to fetch properties");
         }
@@ -94,13 +103,17 @@ const PropertiesPage = () => {
     searchTerm,
     statusFilter,
     cityFilter,
-    // zipFilter,
+    zipcode,
+    state,
+    propertyType,
     priceMin,
-    //  priceMax,
+    priceMax,
+    latitude,
+    longitude,
+    radius,
     bedrooms,
-    //  bathrooms,
     transactionType,
-    minAiScore,
+    max_sqft,
     perPage,
     currentPage,
   ]);
@@ -138,13 +151,18 @@ const PropertiesPage = () => {
     setSearchTerm("");
     setStatusFilter("");
     setCityFilter("");
-    // setZipFilter("");
+    setZipcode("");
+    setState("");
+    setPropertyType("");
     setPriceMin("");
-    // setPriceMax("");
+    setPriceMax("");
+    setLatitude("");
+    setLongitude("");
+    setRadius("");
     setBedrooms("");
-    // setBathrooms("");
+    setBathrooms("");
     setTransactionType("");
-    setMinAiScore("");
+    setMax_sqft("");
     setCurrentPage(1);
   };
 
@@ -153,29 +171,31 @@ const PropertiesPage = () => {
     if (!window.confirm("Are you sure you want to delete this property?"))
       return;
     try {
-      await propertiesAPI.deleteProperty(property.id);
+      await propertiesAPI.deleteProperty(property.source_id);
       // Refetch properties after delete
       const params = {
         page: currentPage,
-        per_page: perPage,
+        limit: perPage,
       };
       if (searchTerm) params.search = searchTerm;
       if (statusFilter) params.status = statusFilter;
       if (cityFilter) params.city = cityFilter;
-      if (priceMin) params.price_min = priceMin;
+      if (zipcode) params.zipcode = zipcode;
+      if (state) params.state = state;
+      if (propertyType) params.property_type = propertyType;
+      if (priceMin) params.min_price = priceMin;
+      if (priceMax) params.max_price = priceMax;
+      if (latitude) params.latitude = latitude;
+      if (longitude) params.longitude = longitude;
+      if (radius) params.radius = radius;
       if (bedrooms) params.bedrooms = bedrooms;
       if (transactionType) params.transaction_type = transactionType;
-      if (minAiScore) params.ai_score_min = minAiScore;
-      const response = await propertiesAPI.getProperties(params);
+      if (max_sqft) params.ai_score_min = max_sqft;
+      const response = await propertiesAPI.getCombinedProperties(params);
       if (response.data.status === "success") {
-        setProperties(response.data.data);
-        if (response.data.meta) {
-          setTotal(response.data.meta.total);
-          setTotalPages(response.data.meta.last_page);
-        } else {
-          setTotal(response.data.data.length);
-          setTotalPages(1);
-        }
+        setProperties(response.data.data.properties);
+        setTotal(response.data.data.total);
+        setTotalPages(Math.ceil(response.data.data.total / perPage));
       } else {
         setError("Failed to fetch properties");
       }
@@ -185,48 +205,14 @@ const PropertiesPage = () => {
   };
 
   // Add handler for saving property (to update savedPropertyIds)
-  const handlePropertySaved = async (propertyId) => {
-    // Refetch saved properties and properties list
-    try {
-      // Refetch saved properties
-      const savedResponse = await propertySaveAPI.getPropertySave({
-        per_page: 100,
-      });
-      if (savedResponse.data.status === "success") {
-        setSavedPropertyIds(
-          savedResponse.data.data.data.map((item) => item.property_id)
-        );
+  const handlePropertySaved = (propertyId) => {
+    // Simply add the property ID to the saved list
+    setSavedPropertyIds((prev) => {
+      if (!prev.includes(propertyId)) {
+        return [...prev, propertyId];
       }
-      // Refetch properties
-      const params = {
-        page: currentPage,
-        per_page: perPage,
-      };
-      if (searchTerm) params.search = searchTerm;
-      if (statusFilter) params.status = statusFilter;
-      if (cityFilter) params.city = cityFilter;
-      if (priceMin) params.price_min = priceMin;
-      if (bedrooms) params.bedrooms = bedrooms;
-      if (transactionType) params.transaction_type = transactionType;
-      if (minAiScore) params.ai_score_min = minAiScore;
-      const response = await propertiesAPI.getProperties(params);
-      if (response.data.status === "success") {
-        setProperties(response.data.data);
-        if (response.data.meta) {
-          setTotal(response.data.meta.total);
-          setTotalPages(response.data.meta.last_page);
-        } else {
-          setTotal(response.data.data.length);
-          setTotalPages(1);
-        }
-      } else {
-        setError("Failed to fetch properties");
-      }
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to refresh after saving property"
-      );
-    }
+      return prev;
+    });
   };
 
   return (
@@ -273,7 +259,7 @@ const PropertiesPage = () => {
       </div>
       {/* Filters */}
       <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/10">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -285,6 +271,25 @@ const PropertiesPage = () => {
               className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {/* Property Type */}
+          <div className="relative">
+            <Filter className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <select
+              value={propertyType}
+              onChange={(e) => setPropertyType(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 [&>option]:text-black [&>option]:bg-white"
+            >
+              <option value="">All Property Types</option>
+              <option value="single_family">Single Family</option>
+              <option value="multi_family">Multi Family</option>
+              <option value="condo">Condo</option>
+              <option value="townhouse">Townhouse</option>
+              <option value="land">Land</option>
+              <option value="commercial">Commercial</option>
+            </select>
+          </div>
+
           {/* Status Filter */}
           <div className="relative">
             <Filter className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -298,38 +303,6 @@ const PropertiesPage = () => {
               <option value="pending">Pending</option>
               <option value="sold">Sold</option>
             </select>
-          </div>
-          {/* City Filter */}
-          <div>
-            <input
-              type="text"
-              placeholder="City"
-              value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
-              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Price Min */}
-          <div>
-            <input
-              type="number"
-              placeholder="Min Price"
-              value={priceMin}
-              onChange={(e) => setPriceMin(e.target.value)}
-              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Bedrooms */}
-          <div>
-            <input
-              type="number"
-              placeholder="Bedrooms"
-              value={bedrooms}
-              onChange={(e) => setBedrooms(e.target.value)}
-              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
           </div>
 
           {/* Transaction Type */}
@@ -345,16 +318,129 @@ const PropertiesPage = () => {
               <option value="sale">Sale</option>
             </select>
           </div>
+
+          {/* City Filter */}
+          <div>
+            <input
+              type="text"
+              placeholder="City"
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* State Filter */}
+          <div>
+            <input
+              type="text"
+              placeholder="State"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Zipcode Filter */}
+          <div>
+            <input
+              type="text"
+              placeholder="Zipcode"
+              value={zipcode}
+              onChange={(e) => setZipcode(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Price Min */}
+          <div>
+            <input
+              type="number"
+              placeholder="Min Price"
+              value={priceMin}
+              onChange={(e) => setPriceMin(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Price Max */}
+          <div>
+            <input
+              type="number"
+              placeholder="Max Price"
+              value={priceMax}
+              onChange={(e) => setPriceMax(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Bedrooms */}
+          <div>
+            <input
+              type="number"
+              placeholder="Bedrooms"
+              value={bedrooms}
+              onChange={(e) => setBedrooms(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          {/* Bathrooms */}
+          <div>
+            <input
+              type="number"
+              placeholder="Bathrooms"
+              value={bathrooms}
+              onChange={(e) => setBathrooms(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
           {/* AI Score Filter */}
           <div>
             <input
               type="number"
-              placeholder="Min AI Score"
-              value={minAiScore}
-              onChange={(e) => setMinAiScore(e.target.value)}
+              placeholder="Min Square ft"
+              value={max_sqft}
+              onChange={(e) => setMax_sqft(e.target.value)}
               className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          {/* Latitude */}
+          <div>
+            <input
+              type="number"
+              step="any"
+              placeholder="Latitude"
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Longitude */}
+          <div>
+            <input
+              type="number"
+              step="any"
+              placeholder="Longitude"
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Radius */}
+          <div>
+            <input
+              type="number"
+              placeholder="Radius (miles)"
+              value={radius}
+              onChange={(e) => setRadius(e.target.value)}
+              className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
           {/* Per Page */}
           <div>
             <select
@@ -368,6 +454,7 @@ const PropertiesPage = () => {
               <option value="100">100 per page</option>
             </select>
           </div>
+
           {/* Refresh Button */}
           <div>
             <button
@@ -414,19 +501,63 @@ const PropertiesPage = () => {
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <div className="flex items-center gap-1">
-                {[...Array(totalPages)].map((_, i) => (
+                {/* First page */}
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                    currentPage === 1
+                      ? "bg-blue-500 text-white"
+                      : "text-gray-400 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  1
+                </button>
+
+                {/* Left ellipsis */}
+                {currentPage > 3 && (
+                  <span className="px-2 text-gray-400">...</span>
+                )}
+
+                {/* Pages around current */}
+                {[...Array(totalPages)].map((_, i) => {
+                  const page = i + 1;
+                  if (page === 1 || page === totalPages) return null;
+                  if (Math.abs(page - currentPage) <= 1) {
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                          currentPage === page
+                            ? "bg-blue-500 text-white"
+                            : "text-gray-400 hover:text-white hover:bg-white/10"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  }
+                  return null;
+                })}
+
+                {/* Right ellipsis */}
+                {currentPage < totalPages - 2 && (
+                  <span className="px-2 text-gray-400">...</span>
+                )}
+
+                {/* Last page */}
+                {totalPages > 1 && (
                   <button
-                    key={i + 1}
-                    onClick={() => setCurrentPage(i + 1)}
+                    onClick={() => setCurrentPage(totalPages)}
                     className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                      currentPage === i + 1
+                      currentPage === totalPages
                         ? "bg-blue-500 text-white"
                         : "text-gray-400 hover:text-white hover:bg-white/10"
                     }`}
                   >
-                    {i + 1}
+                    {totalPages}
                   </button>
-                ))}
+                )}
               </div>
               <button
                 onClick={() =>

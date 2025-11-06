@@ -1,6 +1,7 @@
 import axios from "axios";
 
 // Base URLs - matching your Django server
+// const BASE_URL = "http://localhost:8140";
 const BASE_URL = "https://api.deelflowai.com";
 const API_BASE_URL = `${BASE_URL}/api`;
 
@@ -77,17 +78,17 @@ export const authAPI = {
   login: (credentials) => AllPOSTHeader.post("/api/auth/login", credentials), // Matches your URL pattern
   register: (userData) => AllPOSTHeader.post("/api/auth/register", userData), // Matches your URL pattern
   logout: () => api.post("/logout/"),
-  getCurrentUser: () => api.get("/user/"),
-  getAllUsers: () => api.get("/users/"),
-  invite: (data) => api.post("/invitations/", data),
-  getInvitation: (invitationtoken) =>
-    api.get(`/validate-invitation/?token=${invitationtoken}`),
-  inviteeRegister: (userData) => api.post("/invitee-register/", userData),
+  getCurrentUser: () => api.get("/auth/me/"),
+  getAllUsers: (tenantId) => api.get(`/tenants/${tenantId}/users/`),
+  invite: (id, data) => api.post(`/tenants/${id}/invitations/`, data),
+  getInvitation: (id) => api.get(`/tenants/${id}/invitations`),
+  acceptInvitation: (id, data) => api.post(`/invitations/${id}/accept`, data),
 };
 
 export const leadsAPI = {
   getLeads: (params) => api.get("/leads/", { params }),
-  getLead: (id) => api.get(`/leads/${id}/`),
+  getLead: (id) => AllGETHeader.get(`/leads/${id}/`),
+
   createLead: (data) => AllPOSTHeader.post("/leads/", data),
   updateLead: (id, data) => api.put(`/leads/${id}/`, data),
   deleteLead: (id) => api.delete(`/leads/${id}/`),
@@ -101,6 +102,9 @@ export const propertiesAPI = {
   updateProperty: (id, data) => api.put(`/properties/${id}/`, data),
   deleteProperty: (id) => api.delete(`/properties/${id}/`),
   getAIAnalysis: (id) => api.get(`/properties/${id}/ai-analysis/`),
+
+  getCombinedProperties: (params) =>
+    api.get("/properties/combined", { params }),
 };
 
 export const dealsAPI = {
@@ -145,11 +149,14 @@ export const propertySaveAPI = {
 };
 
 export const TenantAPI = {
-  getTenants: (params) => api.get("/tenant/", { params }),
-  getTenant: (id) => api.get(`/tenant/${id}/`),
-  createTenant: (data) => api.post("/tenant/", data),
-  updateTenant: (id, data) => api.put(`/tenant/${id}/`, data),
-  deleteTenant: (id) => api.delete(`/tenant/${id}/`),
+  getTenants: (params) => api.get("/admin/tenants/", { params }),
+  getTenant: (id) => api.get(`/admin/tenants/${id}/`),
+  createTenant: (data) => api.post("/admin/tenants/", data),
+  updateTenant: (id, data) => api.put(`/admin/tenants/${id}/`, data),
+  suspendTenant: (data) =>
+    api.post(`/admin/tenants/${data.tenant_id}/suspend/`),
+  activateTenant: (data) =>
+    api.post(`/admin/tenants/${data.tenant_id}/activate/`),
 };
 
 export const OrganizationAPI = {
@@ -163,17 +170,23 @@ export const RbacAPI = {
   getRoles: () => api.get("/roles/"),
   getPermissions: () => api.get("/permissions/"),
   UpdatePermission: (id, data) => api.put(`/roles/${id}/`, data),
-  UpdateRole: (data) => AllPOSTHeader.put(`/users/${data.id}/roles/`, data),
+  AssignUser: (data) =>
+    api.post(`/roles/${data.role_id}/assign-user/${data.user_id}`, data),
   getRoleById: (id) => api.get(`/roles/${id}`),
   deleteRole: (roleId) => api.delete(`/roles/${roleId}`),
+
+  getTenantRoles: (id) => api.get(`/tenants/${id}/roles`),
+  createTenantRole: (data) =>
+    api.post(`/tenants/${data.tenant_id}/roles`, data),
 };
 
 export const PaymentAPI = {
-  getSubscriptionPack: () => api.get(`/subscription-packs/`),
-  createCheckout: (id) => api.post(`/create-checkout-session/`, id),
-  createCustomerPortal: () => api.post(`/create-customer-portal-session/`),
-  getTransactionList: () => api.post(`/stripe-invoice/`),
-  getCurrentPack: () => api.get(`/current-subscription/`),
+  getSubscriptionPack: () => AllPOSTHeader.get(`/subscription-packs/`),
+  createCheckout: (id) => AllPOSTHeader.post(`/create-checkout-session/`, id),
+  createCustomerPortal: () =>
+    AllPOSTHeader.post(`/create-customer-portal-session/`),
+  getTransactionList: () => AllPOSTHeader.post(`/stripe-invoice/`),
+  getCurrentPack: () => AllPOSTHeader.get(`/current-subscription/`),
 };
 
 export const DashboardAPI = {
