@@ -1,7 +1,11 @@
 import axios from "axios";
 
 // Base URLs - matching your Django server
-// const BASE_URL = "http://localhost:8140";
+// Use environment variable if available, otherwise default to localhost
+const API_HOST = import.meta.env.VITE_API_HOST || "localhost";
+const API_PORT = import.meta.env.VITE_API_PORT || "8140";
+// const BASE_URL =
+//   import.meta.env.VITE_API_URL || `http://${API_HOST}:${API_PORT}`;
 const BASE_URL = "https://api.deelflowai.com";
 const API_BASE_URL = `${BASE_URL}/api`;
 
@@ -29,10 +33,22 @@ const AllGETHeader = axios.create({
   },
 });
 
+// const AllPOSTHeader = axios.create({
+//   baseURL: BASE_URL, // Use base URL without /api prefix
+//   // withCredentials: true,
+//   // credentials: "include", // 👈 REQUIRED for session cookies
+//   method: "POST",
+//   headers: {
+//     "Content-Type": "application/json",
+//     Accept: "application/json",
+//     "X-Requested-With": "XMLHttpRequest",
+//   },
+// });
+
 const AllPOSTHeader = axios.create({
   baseURL: BASE_URL, // Use base URL without /api prefix
-  // withCredentials: true,
-  // credentials: "include", // 👈 REQUIRED for session cookies
+  withCredentials: true,
+  credentials: "include", // 👈 REQUIRED for session cookies
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -40,6 +56,27 @@ const AllPOSTHeader = axios.create({
     "X-Requested-With": "XMLHttpRequest",
   },
 });
+
+AllPOSTHeader.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+AllGETHeader.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // No CSRF token needed for JWT authentication
 
@@ -83,16 +120,19 @@ export const authAPI = {
   invite: (id, data) => api.post(`/tenants/${id}/invitations/`, data),
   getInvitation: (id) => api.get(`/tenants/${id}/invitations`),
   acceptInvitation: (id, data) => api.post(`/invitations/${id}/accept`, data),
+
+  getCurrentUser: () => api.get("/subscription/payment/success"),
+  getAllUsersForSuperAdmin: () => api.get(`/users/`),
 };
 
 export const leadsAPI = {
-  getLeads: (params) => api.get("/leads/", { params }),
+  getLeads: (params) => AllGETHeader.get("/leads/", { params }),
   getLead: (id) => AllGETHeader.get(`/leads/${id}/`),
 
   createLead: (data) => AllPOSTHeader.post("/leads/", data),
-  updateLead: (id, data) => api.put(`/leads/${id}/`, data),
-  deleteLead: (id) => api.delete(`/leads/${id}/`),
-  getAIScore: (id) => api.get(`/leads/${id}/ai-score/`),
+  updateLead: (id, data) => AllPOSTHeader.put(`/leads/${id}/`, data),
+  deleteLead: (id) => AllPOSTHeader.delete(`/leads/${id}/`),
+  getAIScore: (id) => AllGETHeader.get(`/leads/${id}/ai-score/`),
 };
 
 export const propertiesAPI = {
@@ -157,6 +197,8 @@ export const TenantAPI = {
     api.post(`/admin/tenants/${data.tenant_id}/suspend/`),
   activateTenant: (data) =>
     api.post(`/admin/tenants/${data.tenant_id}/activate/`),
+
+  AssignUserTenant: (data) => api.post(`/admin/tenants/assign-user`, data),
 };
 
 export const OrganizationAPI = {
@@ -187,6 +229,8 @@ export const PaymentAPI = {
     AllPOSTHeader.post(`/create-customer-portal-session/`),
   getTransactionList: () => AllPOSTHeader.post(`/stripe-invoice/`),
   getCurrentPack: () => AllPOSTHeader.get(`/current-subscription/`),
+  getPacks: () => api.get(`/plans`),
+  getPaymentResponse: () => api.get(`/subscription/payment/success`),
 };
 
 export const DashboardAPI = {
