@@ -39,12 +39,12 @@ const getBaseURL = () => {
   // For development mode, default to localhost
   // For production mode, use dev.deelflowai.com if host is still localhost
   if (import.meta.env.MODE === "production" && host === "localhost") {
-    return `http://dev.deelflowai.com:${port}`;
+    return `https://api.deelflowai.com:${port}`;
   }
 
   // For development, use localhost
   if (import.meta.env.MODE === "development" && host === "localhost") {
-    return `https://api.deelflowai.com:${port}`;
+    return `http://localhost:${port}`;
   }
 
   return `${protocol}://${host}:${port}`;
@@ -171,12 +171,13 @@ export const authAPI = {
   register: (userData) => AllPOSTHeader.post("/api/auth/register", userData), // Matches your URL pattern
   logout: () => api.post("/logout/"),
   getCurrentUser: () => api.get("/auth/me/"),
+  updateProfile: (profileData) => api.put("/auth/profile", profileData),
+  changePassword: (passwordData) =>
+    api.put("/auth/change-password", passwordData),
   getAllUsers: (tenantId) => api.get(`/tenants/${tenantId}/users/`),
   invite: (id, data) => api.post(`/tenants/${id}/invitations/`, data),
   getInvitation: (id) => api.get(`/tenants/${id}/invitations`),
   acceptInvitation: (id, data) => api.post(`/invitations/${id}/accept`, data),
-
-  getCurrentUser: () => api.get("/subscription/payment/success"),
   getAllUsersForSuperAdmin: () => api.get(`/users/`),
 };
 
@@ -271,6 +272,7 @@ export const TenantAPI = {
 export const OrganizationAPI = {
   getOrganizationStatus: () => api.get(`/organizations/status/`),
   getOrganization: () => api.get(`/organizations/`),
+  getCurrentOrganization: () => api.get(`/organization/`),
   UpdateOrganization: (id, data) => api.put(`/organizations/${id}/`, data),
 };
 
