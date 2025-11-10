@@ -17,7 +17,7 @@ export default defineConfig({
     host: "0.0.0.0", // Allow external connections (needed for Codespaces)
     hmr: {
       port: 5175,
-      host: "0.0.0.0", // Allow external connections
+      host: "localhost", // Client must use localhost, not 0.0.0.0
       // Disable WebSocket in proxy environments to prevent loops
       clientPort: process.env.NODE_ENV === 'development' ? 5175 : undefined,
     },
