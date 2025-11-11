@@ -36,7 +36,7 @@ import { setCampaigns } from "../../../store/slices/campaignsSlice";
 import { useCallback, useState, useEffect } from "react";
 import PriceRangeSlider from "../PriceRangeSlider";
 import { geographicAPI } from "../../../services/api";
-import LocationPicker from "../../../components/LocationPicker/LocationPicker";
+import LocationPicker from "../../../components/LocationPicker/LocationPickerWrapper";
 import { reverseGeocode } from "../../../services/geocoding";
 
 const CreateCampaignForm = ({ fillMode }) => {
@@ -570,7 +570,7 @@ const CreateCampaignForm = ({ fillMode }) => {
         property_type: formData.property_type || "",
         min_price: formData.min_price || null,
         max_price: formData.max_price || null,
-        minimum_equity: formData.minimum_equity || null,
+        minimum_equity: formData.minimum_equity || 0,
         distress_indicators: formData.distress_indicators || [],
         // Buyer Finder fields
         buyer_country: formData.buyer_country || "",
@@ -1338,12 +1338,12 @@ const CreateCampaignForm = ({ fillMode }) => {
                         Click on the map to automatically fill location fields
                         above
                       </p>
-                      {/* <LocationPicker
+                      <LocationPicker
                         onLocationSelect={handleBuyerLocationSelect}
                         initialPosition={buyerMapPosition || [20.5937, 78.9629]}
                         zoom={buyerMapPosition ? 10 : 5}
                         height={400}
-                      /> */}
+                      />
                       {isGeocodingBuyer && (
                         <div className="text-sm text-blue-600 mt-2 flex items-center gap-2">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -1641,14 +1641,14 @@ const CreateCampaignForm = ({ fillMode }) => {
                         Click on the map to automatically fill location fields
                         above
                       </p>
-                      {/* <LocationPicker
+                      <LocationPicker
                         onLocationSelect={handleSellerLocationSelect}
                         initialPosition={
                           sellerMapPosition || [20.5937, 78.9629]
                         }
                         zoom={sellerMapPosition ? 10 : 5}
                         height={400}
-                      /> */}
+                      />
                       {isGeocodingSeller && (
                         <div className="text-sm text-emerald-600 mt-2 flex items-center gap-2">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
