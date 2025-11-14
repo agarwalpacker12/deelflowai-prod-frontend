@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { campaignSchema, channels } from "./utilities";
+import { campaignSchema, channels, propertyTypes } from "./utilities";
 import { useMutation } from "@tanstack/react-query";
 import { campaignsAPI } from "../../../services/api";
 import toast from "react-hot-toast";
@@ -14,6 +14,7 @@ import {
   Calendar,
   Settings,
   Mail,
+  Phone,
   Sparkles,
   Target,
   Filter,
@@ -29,7 +30,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setCampaigns } from "../../../store/slices/campaignsSlice";
 import { useCallback, useState, useEffect } from "react";
 import PriceRangeSlider from "../PriceRangeSlider";
-import { geographicAPI } from "../../../services/api";
+import { geographicAPI, communicationsAPI } from "../../../services/api";
 import LocationPicker from "../../../components/LocationPicker/LocationPickerWrapper";
 import { reverseGeocode } from "../../../services/geocoding";
 
@@ -51,15 +52,20 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
   const [countries, setCountries] = useState([]);
   const [buyerStates, setBuyerStates] = useState([]);
   const [sellerStates, setSellerStates] = useState([]);
+  const [buyerCounties, setBuyerCounties] = useState([]);
+  const [sellerCounties, setSellerCounties] = useState([]);
   const [buyerCities, setBuyerCities] = useState([]);
   const [sellerCities, setSellerCities] = useState([]);
   const [selectedBuyerCountryId, setSelectedBuyerCountryId] = useState("233");
   const [selectedBuyerStateId, setSelectedBuyerStateId] = useState(null);
-  const [selectedSellerCountryId, setSelectedSellerCountryId] = useState("233");
+  const [selectedSellerCountryId, setSelectedSellerCountryId] = useState(null);
   const [selectedSellerStateId, setSelectedSellerStateId] = useState(null);
+  const [selectedSellerCountyId, setSelectedSellerCountyId] = useState(null);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [loadingBuyerStates, setLoadingBuyerStates] = useState(false);
   const [loadingSellerStates, setLoadingSellerStates] = useState(false);
+  const [loadingBuyerCounties, setLoadingBuyerCounties] = useState(false);
+  const [loadingSellerCounties, setLoadingSellerCounties] = useState(false);
   const [loadingBuyerCities, setLoadingBuyerCities] = useState(false);
   const [loadingSellerCities, setLoadingSellerCities] = useState(false);
   const [buyerMapPosition, setBuyerMapPosition] = useState(null);
@@ -83,6 +89,19 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
 
   // Watch campaign type to show/hide relevant sections
   const campaignType = watch("campaign_type");
+  const selectedChannels = watch("channel") || [];
+
+  // Communication lists state
+  const [emailLists, setEmailLists] = useState([]);
+  const [phoneLists, setPhoneLists] = useState([]);
+  const [loadingEmailLists, setLoadingEmailLists] = useState(false);
+  const [loadingPhoneLists, setLoadingPhoneLists] = useState(false);
+  const [selectedEmailListIds, setSelectedEmailListIds] = useState(
+    campaign?.email_list_ids || []
+  );
+  const [selectedPhoneListIds, setSelectedPhoneListIds] = useState(
+    campaign?.phone_list_ids || []
+  );
 
   // Add this state to your component
   const [priceRange, setPriceRange] = useState({
@@ -137,6 +156,8 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
         type: selectedScopeType,
         counties: selectedCounties.map((c) => c.name),
       },
+      email_list_ids: selectedEmailListIds,
+      phone_list_ids: selectedPhoneListIds,
     };
     // console.log("formData", JSON.stringify(formData));
 
@@ -255,6 +276,14 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
           campaign.property_year_built_max || ""
         );
         setValue("seller_keywords", campaign.seller_keywords || "");
+
+        // Set communication list IDs
+        if (campaign.email_list_ids) {
+          setSelectedEmailListIds(campaign.email_list_ids);
+        }
+        if (campaign.phone_list_ids) {
+          setSelectedPhoneListIds(campaign.phone_list_ids);
+        }
       }
 
       // Set geographic scope for counties
@@ -273,6 +302,68 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
       }
     }
   }, [campaign, setValue]);
+
+  // Fetch email lists when email channel is selected
+  useEffect(() => {
+    const hasEmailChannel = Array.isArray(selectedChannels)
+      ? selectedChannels.includes("email")
+      : selectedChannels === "email" ||
+        (typeof selectedChannels === "string" &&
+          selectedChannels.includes("email"));
+
+    if (hasEmailChannel) {
+      const fetchEmailLists = async () => {
+        setLoadingEmailLists(true);
+        try {
+          const response = await communicationsAPI.getListsForCampaign({
+            list_type: "email",
+          });
+          if (response.data.status === "success") {
+            setEmailLists(response.data.data || []);
+          }
+        } catch (error) {
+          console.error("Error fetching email lists:", error);
+        } finally {
+          setLoadingEmailLists(false);
+        }
+      };
+      fetchEmailLists();
+    } else {
+      setEmailLists([]);
+      setSelectedEmailListIds([]);
+    }
+  }, [selectedChannels]);
+
+  // Fetch phone lists when sms channel is selected
+  useEffect(() => {
+    const hasSmsChannel = Array.isArray(selectedChannels)
+      ? selectedChannels.includes("sms")
+      : selectedChannels === "sms" ||
+        (typeof selectedChannels === "string" &&
+          selectedChannels.includes("sms"));
+
+    if (hasSmsChannel) {
+      const fetchPhoneLists = async () => {
+        setLoadingPhoneLists(true);
+        try {
+          const response = await communicationsAPI.getListsForCampaign({
+            list_type: "phone",
+          });
+          if (response.data.status === "success") {
+            setPhoneLists(response.data.data || []);
+          }
+        } catch (error) {
+          console.error("Error fetching phone lists:", error);
+        } finally {
+          setLoadingPhoneLists(false);
+        }
+      };
+      fetchPhoneLists();
+    } else {
+      setPhoneLists([]);
+      setSelectedPhoneListIds([]);
+    }
+  }, [selectedChannels]);
 
   // Fetch countries on component mount
   useEffect(() => {
@@ -498,6 +589,41 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
     fetchStates();
   }, [selectedSellerCountryId]);
 
+  // Fetch buyer counties when buyer state changes
+  useEffect(() => {
+    if (!selectedBuyerStateId) {
+      setBuyerCounties([]);
+      setSelectedBuyerCountryId(null);
+      setValue("buyer_counties", "");
+      return;
+    }
+
+    const fetchCounties = async () => {
+      setLoadingBuyerCounties(true);
+      try {
+        const response = await geographicAPI.getCountiesByState(
+          selectedBuyerStateId
+        );
+        if (response?.status === "success" && response.data) {
+          // Sort counties alphabetically by name
+          const sortedCounties = [...response.data].sort((a, b) =>
+            (a.name || "").localeCompare(b.name || "", undefined, {
+              sensitivity: "base",
+            })
+          );
+          setBuyerCounties(sortedCounties);
+        }
+      } catch (error) {
+        console.error("Error fetching buyer counties:", error);
+        toast.error("Failed to load counties");
+      } finally {
+        setLoadingBuyerCounties(false);
+      }
+    };
+
+    fetchCounties();
+  }, [selectedBuyerStateId, setValue]);
+
   // Fetch buyer cities when buyer state changes
   useEffect(() => {
     if (!selectedBuyerStateId) {
@@ -531,6 +657,41 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
 
     fetchCities();
   }, [selectedBuyerStateId, setValue]);
+
+  // Fetch seller counties when seller state changes
+  useEffect(() => {
+    if (!selectedSellerStateId) {
+      setSellerCounties([]);
+      setSelectedSellerCountyId(null);
+      setValue("seller_counties", "");
+      return;
+    }
+
+    const fetchCounties = async () => {
+      setLoadingSellerCounties(true);
+      try {
+        const response = await geographicAPI.getCountiesByState(
+          selectedSellerStateId
+        );
+        if (response?.status === "success" && response.data) {
+          // Sort counties alphabetically by name
+          const sortedCounties = [...response.data].sort((a, b) =>
+            (a.name || "").localeCompare(b.name || "", undefined, {
+              sensitivity: "base",
+            })
+          );
+          setSellerCounties(sortedCounties);
+        }
+      } catch (error) {
+        console.error("Error fetching seller counties:", error);
+        toast.error("Failed to load counties");
+      } finally {
+        setLoadingSellerCounties(false);
+      }
+    };
+
+    fetchCounties();
+  }, [selectedSellerStateId, setValue]);
 
   // Fetch seller cities when seller state changes
   useEffect(() => {
@@ -604,6 +765,60 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
             setSelectedBuyerStateId(matchedState.id);
             setValue("buyer_state", matchedState.name);
 
+            // Fetch counties for the matched state
+            try {
+              const countiesResponse = await geographicAPI.getCountiesByState(
+                matchedState.id
+              );
+              if (
+                countiesResponse?.status === "success" &&
+                countiesResponse.data
+              ) {
+                const sortedCounties = [...countiesResponse.data].sort((a, b) =>
+                  (a.name || "").localeCompare(b.name || "", undefined, {
+                    sensitivity: "base",
+                  })
+                );
+                setBuyerCounties(sortedCounties);
+
+                // Try to match the geocoded county
+                const geocodedCountyName =
+                  locationData.county || locationData.district || "";
+                if (geocodedCountyName) {
+                  let matchedCounty = sortedCounties.find(
+                    (c) =>
+                      c.name.toLowerCase() === geocodedCountyName.toLowerCase()
+                  );
+
+                  if (!matchedCounty) {
+                    matchedCounty = sortedCounties.find(
+                      (c) =>
+                        c.name
+                          .toLowerCase()
+                          .includes(geocodedCountyName.toLowerCase()) ||
+                        geocodedCountyName
+                          .toLowerCase()
+                          .includes(c.name.toLowerCase())
+                    );
+                  }
+
+                  if (matchedCounty) {
+                    setSelectedBuyerCountryId(matchedCounty.id);
+                    setValue("buyer_counties", matchedCounty.name);
+                  } else {
+                    setValue("buyer_counties", geocodedCountyName);
+                  }
+                }
+              }
+            } catch (countyError) {
+              console.warn("Failed to fetch counties:", countyError);
+              // Use geocoded county value if available
+              setValue(
+                "buyer_counties",
+                locationData.county || locationData.district || ""
+              );
+            }
+
             // Fetch cities for the matched state and then match the city
             const citiesResponse = await geographicAPI.getCitiesByState(
               matchedState.id
@@ -660,6 +875,10 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
               "buyer_city",
               locationData.city || locationData.components?.city || ""
             );
+            setValue(
+              "buyer_counties",
+              locationData.county || locationData.district || ""
+            );
           }
         }
       } else {
@@ -669,11 +888,14 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
           "buyer_city",
           locationData.city || locationData.components?.city || ""
         );
+        setValue(
+          "buyer_counties",
+          locationData.county || locationData.district || ""
+        );
       }
 
       // Fill other fields
-      setValue("buyer_districts", locationData.district);
-      setValue("buyer_counties", locationData.district || locationData.city);
+      setValue("buyer_districts", locationData.district || "");
 
       toast.success("Location details filled from map");
     } catch (error) {
@@ -721,6 +943,60 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
           if (matchedState) {
             setSelectedSellerStateId(matchedState.id);
             setValue("seller_state", matchedState.name);
+
+            // Fetch counties for the matched state
+            try {
+              const countiesResponse = await geographicAPI.getCountiesByState(
+                matchedState.id
+              );
+              if (
+                countiesResponse?.status === "success" &&
+                countiesResponse.data
+              ) {
+                const sortedCounties = [...countiesResponse.data].sort((a, b) =>
+                  (a.name || "").localeCompare(b.name || "", undefined, {
+                    sensitivity: "base",
+                  })
+                );
+                setSellerCounties(sortedCounties);
+
+                // Try to match the geocoded county
+                const geocodedCountyName =
+                  locationData.county || locationData.district || "";
+                if (geocodedCountyName) {
+                  let matchedCounty = sortedCounties.find(
+                    (c) =>
+                      c.name.toLowerCase() === geocodedCountyName.toLowerCase()
+                  );
+
+                  if (!matchedCounty) {
+                    matchedCounty = sortedCounties.find(
+                      (c) =>
+                        c.name
+                          .toLowerCase()
+                          .includes(geocodedCountyName.toLowerCase()) ||
+                        geocodedCountyName
+                          .toLowerCase()
+                          .includes(c.name.toLowerCase())
+                    );
+                  }
+
+                  if (matchedCounty) {
+                    setSelectedSellerCountyId(matchedCounty.id);
+                    setValue("seller_counties", matchedCounty.name);
+                  } else {
+                    setValue("seller_counties", geocodedCountyName);
+                  }
+                }
+              }
+            } catch (countyError) {
+              console.warn("Failed to fetch counties:", countyError);
+              // Use geocoded county value if available
+              setValue(
+                "seller_counties",
+                locationData.county || locationData.district || ""
+              );
+            }
 
             // Fetch cities for the matched state and then match the city
             const citiesResponse = await geographicAPI.getCitiesByState(
@@ -778,6 +1054,10 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
               "seller_city",
               locationData.city || locationData.components?.city || ""
             );
+            setValue(
+              "seller_counties",
+              locationData.county || locationData.district || ""
+            );
           }
         }
       } else {
@@ -787,11 +1067,14 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
           "seller_city",
           locationData.city || locationData.components?.city || ""
         );
+        setValue(
+          "seller_counties",
+          locationData.county || locationData.district || ""
+        );
       }
 
       // Fill other fields
-      setValue("seller_districts", locationData.district);
-      setValue("seller_counties", locationData.district || locationData.city);
+      setValue("seller_districts", locationData.district || "");
 
       toast.success("Location details filled from map");
     } catch (error) {
@@ -883,6 +1166,32 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
     } finally {
       setIsGeneratingAI(false);
     }
+  };
+
+  // Add this helper function at the top of your component, outside the component function
+  const formatDateForInput = (date) => {
+    return date.toISOString().split("T")[0];
+  };
+
+  // Add this inside your component, after the existing watch statements
+  const watchedStartDate = watch("scheduled_start_date");
+
+  // Calculate minimum dates
+  const today = new Date();
+  const minStartDate = formatDateForInput(today);
+
+  // Calculate minimum end date (1 day after start date, or tomorrow if no start date selected)
+  const getMinEndDate = () => {
+    if (watchedStartDate) {
+      const startDate = new Date(watchedStartDate);
+      const nextDay = new Date(startDate);
+      nextDay.setDate(startDate.getDate() + 1);
+      return formatDateForInput(nextDay);
+    }
+    // If no start date selected, minimum end date is tomorrow
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    return formatDateForInput(tomorrow);
   };
 
   return (
@@ -1036,6 +1345,122 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                       )}
                     </div>
 
+                    {/* Email Lists Selection */}
+                    {(Array.isArray(selectedChannels)
+                      ? selectedChannels.includes("email")
+                      : selectedChannels === "email" ||
+                        (typeof selectedChannels === "string" &&
+                          selectedChannels.includes("email"))) && (
+                      <div>
+                        <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
+                          <Mail className="w-4 h-4 mr-2 text-blue-600" />
+                          Email Lists (Optional)
+                        </label>
+                        {loadingEmailLists ? (
+                          <div className="text-gray-500 text-sm">
+                            Loading email lists...
+                          </div>
+                        ) : emailLists.length === 0 ? (
+                          <div className="text-gray-500 text-sm bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                            No email lists available. Create lists in
+                            Communications Management.
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-white/80">
+                            {emailLists.map((list) => (
+                              <label
+                                key={list.id}
+                                className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedEmailListIds.includes(
+                                    list.id
+                                  )}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedEmailListIds([
+                                        ...selectedEmailListIds,
+                                        list.id,
+                                      ]);
+                                    } else {
+                                      setSelectedEmailListIds(
+                                        selectedEmailListIds.filter(
+                                          (id) => id !== list.id
+                                        )
+                                      );
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <span className="ml-3 text-sm text-gray-700">
+                                  {list.name} ({list.entry_count} entries)
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Phone Lists Selection */}
+                    {(Array.isArray(selectedChannels)
+                      ? selectedChannels.includes("sms")
+                      : selectedChannels === "sms" ||
+                        (typeof selectedChannels === "string" &&
+                          selectedChannels.includes("sms"))) && (
+                      <div>
+                        <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
+                          <Phone className="w-4 h-4 mr-2 text-blue-600" />
+                          Phone Lists (Optional)
+                        </label>
+                        {loadingPhoneLists ? (
+                          <div className="text-gray-500 text-sm">
+                            Loading phone lists...
+                          </div>
+                        ) : phoneLists.length === 0 ? (
+                          <div className="text-gray-500 text-sm bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                            No phone lists available. Create lists in
+                            Communications Management.
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-white/80">
+                            {phoneLists.map((list) => (
+                              <label
+                                key={list.id}
+                                className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPhoneListIds.includes(
+                                    list.id
+                                  )}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedPhoneListIds([
+                                        ...selectedPhoneListIds,
+                                        list.id,
+                                      ]);
+                                    } else {
+                                      setSelectedPhoneListIds(
+                                        selectedPhoneListIds.filter(
+                                          (id) => id !== list.id
+                                        )
+                                      );
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <span className="ml-3 text-sm text-gray-700">
+                                  {list.name} ({list.entry_count} entries)
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Budget */}
                     {campaignType === "buyer_finder" && (
                       <div>
@@ -1078,6 +1503,7 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                             {...register("scheduled_start_date")}
                             type="date"
                             className="w-full px-5 py-4 bg-white/80 border-2 border-gray-200 rounded-xl text-gray-900 transition-all duration-200 focus:border-purple-500 focus:bg-white focus:shadow-lg focus:ring-4 focus:ring-purple-100"
+                            min={minStartDate}
                           />
                           {errors.scheduled_start_date && (
                             <p className="text-sm text-red-500 mt-2 flex items-center">
@@ -1096,6 +1522,7 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                             {...register("scheduled_end_date")}
                             type="date"
                             className="w-full px-5 py-4 bg-white/80 border-2 border-gray-200 rounded-xl text-gray-900 transition-all duration-200 focus:border-purple-500 focus:bg-white focus:shadow-lg focus:ring-4 focus:ring-purple-100"
+                            min={getMinEndDate()}
                           />
                           {errors.scheduled_end_date && (
                             <p className="text-sm text-red-500 mt-2 flex items-center">
@@ -1445,6 +1872,9 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                               : "";
                             setValue("buyer_country", countryName);
                             setValue("buyer_state", "");
+                            setValue("buyer_counties", ""); // Clear county when country changes
+                            setSelectedBuyerCountryId(null);
+                            setBuyerCounties([]);
                             setValue("buyer_city", ""); // Clear city when country changes
                           }}
                           disabled={loadingCountries}
@@ -1482,6 +1912,9 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                               ? buyerStates.find((s) => s.id === stateId)?.name
                               : "";
                             setValue("buyer_state", stateName);
+                            setValue("buyer_counties", ""); // Clear county when state changes
+                            setSelectedBuyerCountryId(null);
+                            setBuyerCounties([]);
                             setValue("buyer_city", ""); // Clear city when state changes
                           }}
                           disabled={
@@ -1510,17 +1943,59 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                         )}
                       </div>
 
-                      {/* Counties */}
+                      {/* County */}
                       <div>
                         <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
                           <MapPin className="w-4 h-4 mr-2 text-blue-600" />
-                          Counties
+                          County
                         </label>
-                        <input
-                          {...register("buyer_counties")}
-                          placeholder="e.g., Miami-Dade, Broward"
-                          className="w-full px-5 py-4 bg-white/80 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 transition-all duration-200 focus:border-blue-500 focus:bg-white focus:shadow-lg focus:ring-4 focus:ring-blue-100"
-                        />
+                        <select
+                          value={
+                            selectedBuyerStateId &&
+                            buyerCounties.some(
+                              (c) => c.id === selectedBuyerCountyId
+                            )
+                              ? selectedBuyerCountyId || ""
+                              : ""
+                          }
+                          onChange={(e) => {
+                            const countyId = e.target.value
+                              ? parseInt(e.target.value)
+                              : null;
+                            setSelectedBuyerCountryId(countyId);
+                            const selectedCounty = buyerCounties.find(
+                              (c) => c.id === countyId
+                            );
+                            setValue(
+                              "buyer_counties",
+                              selectedCounty ? selectedCounty.name : ""
+                            );
+                          }}
+                          disabled={
+                            !selectedBuyerStateId || loadingBuyerCounties
+                          }
+                          className="w-full px-5 py-4 bg-white/80 border-2 border-gray-200 rounded-xl text-gray-900 transition-all duration-200 focus:border-blue-500 focus:bg-white focus:shadow-lg focus:ring-4 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <option value="">
+                            {!selectedBuyerStateId
+                              ? "Select a state first"
+                              : loadingBuyerCounties
+                              ? "Loading counties..."
+                              : buyerCounties.length === 0
+                              ? "No counties available"
+                              : "Select County"}
+                          </option>
+                          {buyerCounties.map((county) => (
+                            <option key={county.id} value={county.id}>
+                              {county.name}
+                            </option>
+                          ))}
+                        </select>
+                        {!selectedBuyerStateId && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Select a state first
+                          </p>
+                        )}
                       </div>
 
                       {/* City */}
@@ -1631,22 +2106,6 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                     </div>
 
                     <div className="space-y-6">
-                      {/* Budget Range */}
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                          <DollarSign className="w-5 h-5 mr-2 text-orange-600" />
-                          Seller Budget Range
-                        </h3>
-                        <PriceRangeSlider
-                          minValue={priceRange.min}
-                          maxValue={priceRange.max}
-                          onRangeChange={handlePriceRangeChange}
-                          min={50000}
-                          max={5000000}
-                          step={25000}
-                        />
-                      </div>
-
                       {/* Property Age */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -1733,6 +2192,9 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                               : "";
                             setValue("seller_country", countryName);
                             setValue("seller_state", "");
+                            setValue("seller_counties", ""); // Clear county when country changes
+                            setSelectedSellerCountyId(null);
+                            setSellerCounties([]);
                             setValue("seller_city", ""); // Clear city when country changes
                           }}
                           disabled={loadingCountries}
@@ -1770,6 +2232,9 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                               ? sellerStates.find((s) => s.id === stateId)?.name
                               : "";
                             setValue("seller_state", stateName);
+                            setValue("seller_counties", ""); // Clear county when state changes
+                            setSelectedSellerCountyId(null);
+                            setSellerCounties([]);
                             setValue("seller_city", ""); // Clear city when state changes
                           }}
                           disabled={
@@ -1798,17 +2263,59 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                         )}
                       </div>
 
-                      {/* Counties */}
+                      {/* County */}
                       <div>
                         <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
                           <MapPin className="w-4 h-4 mr-2 text-emerald-600" />
-                          Counties
+                          County
                         </label>
-                        <input
-                          {...register("seller_counties")}
-                          placeholder="e.g., Miami-Dade, Broward"
-                          className="w-full px-5 py-4 bg-white/80 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 transition-all duration-200 focus:border-emerald-500 focus:bg-white focus:shadow-lg focus:ring-4 focus:ring-emerald-100"
-                        />
+                        <select
+                          value={
+                            selectedSellerStateId &&
+                            sellerCounties.some(
+                              (c) => c.id === selectedSellerCountyId
+                            )
+                              ? selectedSellerCountyId || ""
+                              : ""
+                          }
+                          onChange={(e) => {
+                            const countyId = e.target.value
+                              ? parseInt(e.target.value)
+                              : null;
+                            setSelectedSellerCountyId(countyId);
+                            const selectedCounty = sellerCounties.find(
+                              (c) => c.id === countyId
+                            );
+                            setValue(
+                              "seller_counties",
+                              selectedCounty ? selectedCounty.name : ""
+                            );
+                          }}
+                          disabled={
+                            !selectedSellerStateId || loadingSellerCounties
+                          }
+                          className="w-full px-5 py-4 bg-white/80 border-2 border-gray-200 rounded-xl text-gray-900 transition-all duration-200 focus:border-emerald-500 focus:bg-white focus:shadow-lg focus:ring-4 focus:ring-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <option value="">
+                            {!selectedSellerStateId
+                              ? "Select a state first"
+                              : loadingSellerCounties
+                              ? "Loading counties..."
+                              : sellerCounties.length === 0
+                              ? "No counties available"
+                              : "Select County"}
+                          </option>
+                          {sellerCounties.map((county) => (
+                            <option key={county.id} value={county.id}>
+                              {county.name}
+                            </option>
+                          ))}
+                        </select>
+                        {!selectedSellerStateId && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Select a state first
+                          </p>
+                        )}
                       </div>
 
                       {/* City */}
@@ -1997,46 +2504,12 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                         </p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                      {/* <div>
-                            <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
-                              <MapPin className="w-4 h-4 mr-2 text-purple-600" />
-                              Location <Text className="text-red-500 ml-1">*</Text>
-                            </label>
-                            <input
-                              {...register("location")}
-                              placeholder="Miami"
-                              className="w-full px-5 py-4 bg-white/80 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 transition-all duration-200 focus:border-purple-500 focus:bg-white focus:shadow-lg focus:ring-4 focus:ring-purple-100"
-                            />
-                            {errors.location && (
-                              <p className="text-sm text-red-500 mt-2 flex items-center">
-                                <X className="w-4 h-4 mr-1" />
-                                {errors.location.message}
-                              </p>
-                            )}
-                          </div> */}
 
-                      <div>
-                        <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
-                          <Settings className="w-4 h-4 mr-2 text-purple-600" />
-                          Property Type{" "}
-                          <Text className="text-red-500 ml-1">*</Text>
-                        </label>
-                        <input
-                          {...register("property_type")}
-                          placeholder="Residential"
-                          className="w-full px-5 py-4 bg-white/80 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 transition-all duration-200 focus:border-purple-500 focus:bg-white focus:shadow-lg focus:ring-4 focus:ring-purple-100"
-                        />
-                        {errors.property_type && (
-                          <p className="text-sm text-red-500 mt-2 flex items-center">
-                            <X className="w-4 h-4 mr-1" />
-                            {errors.property_type.message}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="flex items-center text-sm font-semibold text-gray-700 mb-3">
+                    <div className="space-y-8">
+                      {/* Minimum Equity - Centered with better spacing */}
+                      {/* <div className="flex justify-center"> */}
+                      <div className="w-full max-w-md">
+                        <label className="flex text-sm font-semibold text-gray-700 mb-4">
                           <DollarSign className="w-4 h-4 mr-2 text-green-600" />
                           Minimum Equity{" "}
                           <Text className="text-red-500 ml-1">*</Text>
@@ -2046,19 +2519,56 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                           <input
                             {...register("minimum_equity")}
                             type="number"
-                            placeholder="100000"
+                            placeholder="100,000"
                             className="w-full pl-12 pr-5 py-4 bg-white/80 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 transition-all duration-200 focus:border-green-500 focus:bg-white focus:shadow-lg focus:ring-4 focus:ring-green-100"
                           />
                         </div>
                         {errors.minimum_equity && (
-                          <p className="text-sm text-red-500 mt-2 flex items-center">
+                          <p className="text-sm text-red-500 mt-3 flex items-center justify-center">
                             <X className="w-4 h-4 mr-1" />
                             {errors.minimum_equity.message}
                           </p>
                         )}
                       </div>
-                    </div>
+                      {/* </div> */}
 
+                      {/* Property Type - Full Width */}
+                      <div>
+                        <label className="flex items-center text-sm font-semibold text-gray-700 mb-4">
+                          <Settings className="w-4 h-4 mr-2 text-purple-600" />
+                          Property Type{" "}
+                          <Text className="text-red-500 ml-1">*</Text>
+                        </label>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                          {propertyTypes.map((type) => (
+                            <label
+                              key={type.value}
+                              className="relative cursor-pointer group"
+                            >
+                              <input
+                                {...register("property_type")}
+                                type="radio"
+                                value={type.value}
+                                className="sr-only peer"
+                              />
+                              <div className="flex items-center justify-center p-4 bg-white/80 border-2 border-gray-200 rounded-xl transition-all duration-300 hover:border-purple-400 hover:shadow-lg hover:bg-white peer-checked:border-purple-600 peer-checked:bg-gradient-to-r peer-checked:from-purple-50 peer-checked:to-pink-50 peer-checked:shadow-xl group-hover:scale-[1.02] min-h-[80px]">
+                                <span className="font-medium text-gray-700 group-hover:text-purple-600 peer-checked:text-purple-700 transition-colors duration-200 text-center text-sm leading-tight">
+                                  {type.label}
+                                </span>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+
+                        {errors.property_type && (
+                          <p className="text-sm text-red-500 mt-3 flex items-center">
+                            <X className="w-4 h-4 mr-1" />
+                            {errors.property_type.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                     {/* Price Range (only show for seller finder or general campaigns) */}
                     {campaignType !== "seller_finder" && (
                       <div className="mb-8">
@@ -2093,9 +2603,8 @@ const EditCampaignForm = ({ fillMode, campaign }) => {
                         )}
                       </div>
                     )}
-
                     {/* Distress Indicators */}
-                    <div>
+                    <div className="mt-8">
                       <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
                         <Target className="w-5 h-5 mr-2 text-purple-600" />
                         Distress Indicators
